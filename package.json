@@ -10,6 +10,9 @@
     "type": "git",
     "url": "git+https://github.com/harshit8204/taskflow.git"
   },
+  "engines": {
+  "node": "18.x"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
