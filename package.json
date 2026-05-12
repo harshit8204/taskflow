@@ -1,26 +1,13 @@
 {
   "name": "taskmanager",
   "version": "1.0.0",
-  "description": "> A full-stack web application for managing team projects, assigning tasks, and tracking progress with role-based access control (Admin/Member).",
   "main": "server.js",
   "scripts": {
-  "start": "node server.js"
-},
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/harshit8204/taskflow.git"
+    "start": "node server.js"
   },
   "engines": {
-  "node": "18.x"
-},
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/harshit8204/taskflow/issues"
+    "node": ">=20.0.0"
   },
-  "homepage": "https://github.com/harshit8204/taskflow#readme",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
