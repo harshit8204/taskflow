@@ -7,8 +7,23 @@ require('dotenv').config();
 
 const app = express();
 
-app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true }));
+// If FRONTEND_URL is not set, reflect the request origin instead of using '*'
+// (credentials + '*' is invalid in browsers).
+app.use(cors({ origin: process.env.FRONTEND_URL || true, credentials: true }));
 app.use(express.json());
+
+mongoose.set('bufferCommands', false);
+
+app.get('/', (req, res) => res.json({ status: 'OK' }));
+
+// Keep the service responsive even if Mongo isn't ready yet.
+app.use('/api', (req, res, next) => {
+  if (req.path === '/health') return next();
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: 'Database not connected yet. Try again shortly.' });
+  }
+  next();
+});
 
 // ─── Models ───────────────────────────────────────────────────────────────────
 
@@ -326,13 +341,32 @@ app.put('/api/users/:id/role', protect, adminOnly, async (req, res) => {
 });
 
 // ─── Health ───────────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date() }));
+app.get('/api/health', (req, res) => {
+  const readyState = mongoose.connection.readyState;
+  res.json({
+    status: 'OK',
+    timestamp: new Date(),
+    db: { readyState, connected: readyState === 1 },
+  });
+});
 
 // ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 })
-  .then(() => {
+app.listen(PORT, '0.0.0.0', () => console.log('Server on port ' + PORT));
+
+const connectMongoWithRetry = async (attempt = 1) => {
+  if (!process.env.MONGO_URI) {
+    console.error('DB error: MONGO_URI is not set');
+    return;
+  }
+  try {
+    await mongoose.connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 10000 });
     console.log('MongoDB connected');
-    app.listen(PORT, '0.0.0.0', () => console.log('Server on port ' + PORT));
-  })
-  .catch(err => { console.error('DB error:', err.message); process.exit(1); });
+  } catch (err) {
+    const delayMs = Math.min(30000, 1000 * Math.pow(2, attempt - 1));
+    console.error(`DB error (attempt ${attempt}):`, err.message);
+    setTimeout(() => connectMongoWithRetry(attempt + 1), delayMs);
+  }
+};
+
+connectMongoWithRetry();
